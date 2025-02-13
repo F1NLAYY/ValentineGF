@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Nunito } from "next/font/google";
+import { Nunito, Prompt } from "next/font/google"; // เพิ่ม Prompt
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +17,12 @@ const nunito = Nunito({
   subsets: ["latin"],
   weight: ["300", "400", "700"],
   variable: "--font-nunito",
+});
+
+const prompt = Prompt({
+  subsets: ["latin", "thai"], // รองรับทั้งภาษาอังกฤษและไทย
+  weight: ["300", "400", "700"],
+  variable: "--font-prompt",
 });
 
 export const metadata: Metadata = {
@@ -50,9 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${nunito.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${nunito.variable} ${prompt.variable} antialiased`}>
         {children}
       </body>
     </html>
