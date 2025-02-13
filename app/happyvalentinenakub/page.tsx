@@ -1,39 +1,40 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import EmojiOverlay from '../components/EmojiOverlay';
 import Image from 'next/image';
 interface Answer {
     question: string;
     answer: string;
-  }
-  
-  interface AnswersMap {
-    [key: number]: Answer;
-  }
+}
 
-export default function HappyValentinePage() {
+interface AnswersMap {
+    [key: number]: Answer;
+}
+
+function Content() {
   const searchParams = useSearchParams();
   const name = searchParams?.get('name') || '';
   const answersRaw = searchParams?.get('answers') || '{}';
   const answers: AnswersMap = JSON.parse(answersRaw);
 
-  const [audio] = useState(typeof window !== 'undefined' ? new Audio('/audio/song-bg.wav') : null);
+  const [audio] = useState(
+    typeof window !== 'undefined' ? new Audio('/audio/song-bg.wav') : null
+  );
 
   const [currentVideo, setCurrentVideo] = useState(1);
 
   useEffect(() => {
     if (audio) {
-      audio.loop = true; // เล่นซ้ำ
-      audio.volume = 0.5; // ตั้งระดับเสียง (0.0 ถึง 1.0)
+      audio.loop = true;
+      audio.volume = 0.5;
       audio.play().catch((error) => {
         console.log("Audio playback failed:", error);
       });
-  
-      // Cleanup function
+
       return () => {
         audio.pause();
         audio.currentTime = 0;
@@ -44,15 +45,15 @@ export default function HappyValentinePage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentVideo((prev) => (prev % 4) + 1);
-    }, 5000); // เปลี่ยนทุก 5 วินาที
-  
+    }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end end"]
+    offset: ['start start', 'end end'],
   });
 
   const sections = [
@@ -120,7 +121,7 @@ export default function HappyValentinePage() {
           className="min-h-screen flex items-center justify-center p-8"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.8, delay: index * 0.2 }}
         >
           {section.content}
@@ -460,5 +461,13 @@ export default function HappyValentinePage() {
 </footer>
     </div>
     
+  );
+}
+
+export default function HappyValentinePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Content />
+    </Suspense>
   );
 }
