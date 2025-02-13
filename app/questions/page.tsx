@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart } from 'lucide-react';
 
 interface Question {
@@ -49,17 +48,9 @@ const FloatingHeart: React.FC<FloatingHeartProps> = ({ position, onComplete }) =
   return (
     <div 
       className="absolute animate-float-up pointer-events-none"
-      style={{ 
-        left: `${position}px`,
-        bottom: '0px',
-        transform: 'translateZ(-1px)'
-      }}
+      style={{ left: `${position}px`, bottom: '0px' }}
     >
-      <Heart 
-        className="text-pink-400 animate-pulse" 
-        size={24}
-        fill="currentColor" 
-      />
+      <Heart className="text-pink-400 animate-pulse" size={24} fill="currentColor" />
     </div>
   );
 };
@@ -67,23 +58,8 @@ const FloatingHeart: React.FC<FloatingHeartProps> = ({ position, onComplete }) =
 const ProgressCircle: React.FC<ProgressCircleProps> = ({ number, isActive, isCompleted, isLast }) => {
   return (
     <div className="flex items-center">
-      <div 
-        className={`
-          w-8 h-8 rounded-full flex items-center justify-center text-sm
-          ${isActive ? 'bg-pink-500 text-white' : 
-            isCompleted ? 'bg-pink-300 text-white' : 'bg-pink-100 text-pink-500'}
-          transition-all duration-300
-        `}
-      >
-        {number}
-      </div>
-      {!isLast && (
-        <div className={`
-          w-12 h-0.5 mx-1
-          ${isCompleted ? 'bg-pink-300' : 'bg-pink-100'}
-          transition-all duration-300
-        `} />
-      )}
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${isActive ? 'bg-pink-500 text-white' : isCompleted ? 'bg-pink-300 text-white' : 'bg-pink-100 text-pink-500'}`}>{number}</div>
+      {!isLast && <div className={`w-12 h-0.5 mx-1 ${isCompleted ? 'bg-pink-300' : 'bg-pink-100'}`} />}
     </div>
   );
 };
@@ -93,7 +69,7 @@ interface Heart {
   position: number;
 }
 
-export default function QuestionPage() {
+function QuestionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const name = searchParams?.get('name') || '';
@@ -104,25 +80,12 @@ export default function QuestionPage() {
   const [hearts, setHearts] = useState<Heart[]>([]);
 
   useEffect(() => {
-    // Load saved answer for current question if it exists
-    if (answers[currentQuestion]) {
-      setCurrentAnswer(answers[currentQuestion].answer);
-    } else {
-      setCurrentAnswer('');
-    }
+    setCurrentAnswer(answers[currentQuestion]?.answer || '');
   }, [currentQuestion, answers]);
 
   const handleTextareaKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = e.currentTarget;
-    const textareaRect = textarea.getBoundingClientRect();
-    const position = Math.random() * (textareaRect.width - 24);
-    
-    const newHeart: Heart = {
-      id: Date.now(),
-      position: position,
-    };
-    
-    setHearts(prev => [...prev, newHeart]);
+    const textareaRect = e.currentTarget.getBoundingClientRect();
+    setHearts(prev => [...prev, { id: Date.now(), position: Math.random() * (textareaRect.width - 24) }]);
   };
 
   const removeHeart = (heartId: number) => {
@@ -130,116 +93,57 @@ export default function QuestionPage() {
   };
 
   const handlePrevious = () => {
-    if (currentQuestion === 1) {
-      router.push('/'); // กลับไปหน้าแรกเพื่อแก้ไขชื่อ
-    } else if (currentQuestion > 1) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
+    if (currentQuestion === 1) router.push('/');
+    else setCurrentQuestion(prev => prev - 1);
   };
 
   const handleNext = () => {
     if (currentAnswer.trim()) {
-      setAnswers(prev => ({
-        ...prev,
-        [currentQuestion]: {
-          question: QUESTIONS[currentQuestion - 1].text,
-          answer: currentAnswer
-        }
-      }));
-
-      if (currentQuestion < QUESTIONS.length) {
-        setCurrentQuestion(currentQuestion + 1);
-      }
+      setAnswers(prev => ({ ...prev, [currentQuestion]: { question: QUESTIONS[currentQuestion - 1].text, answer: currentAnswer } }));
+      if (currentQuestion < QUESTIONS.length) setCurrentQuestion(prev => prev + 1);
     }
   };
 
   const handleSubmit = () => {
     if (currentAnswer.trim()) {
-      const finalAnswers = {
-        ...answers,
-        [currentQuestion]: {
-          question: QUESTIONS[currentQuestion - 1].text,
-          answer: currentAnswer
-        }
-      };
-      
-      router.push(`/happyvalentinenakub?name=${encodeURIComponent(name)}&answers=${encodeURIComponent(JSON.stringify(finalAnswers))}`);
+      router.push(`/happyvalentinenakub?name=${encodeURIComponent(name)}&answers=${encodeURIComponent(JSON.stringify({...answers, [currentQuestion]: { question: QUESTIONS[currentQuestion - 1].text, answer: currentAnswer }}))}`);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-pink-50 p-4">
-      {/* Progress Tracker */}
       <div className="flex justify-center mb-12">
-        {QUESTIONS.map((question, index) => (
-          <ProgressCircle
-            key={question.id}
-            number={question.id}
-            isActive={currentQuestion === question.id}
-            isCompleted={answers[question.id] !== undefined}
-            isLast={index === QUESTIONS.length - 1}
-          />
+        {QUESTIONS.map((q, index) => (
+          <ProgressCircle key={q.id} number={q.id} isActive={currentQuestion === q.id} isCompleted={answers[q.id] !== undefined} isLast={index === QUESTIONS.length - 1} />
         ))}
       </div>
 
-      {/* Question Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-        <div className="text-pink-500 text-lg mb-6">
-          นี่ๆๆๆ {name}! เค้ามีคำถามหล่ะ ตอบให้หมดด้วยนะ! 💕
-        </div>
+        <div className="text-pink-500 text-lg mb-6">นี่ๆๆๆ {name}! เค้ามีคำถามหล่ะ ตอบให้หมดด้วยนะ! 💕</div>
+        <div className="text-gray-700 text-xl mb-4">{QUESTIONS[currentQuestion - 1].text}</div>
         
-        <div className="text-gray-700 text-xl mb-4">
-          {QUESTIONS[currentQuestion - 1].text}
-        </div>
-
         <div className="relative">
-          <textarea
-            value={currentAnswer}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCurrentAnswer(e.target.value)}
-            onKeyDown={handleTextareaKeyPress}
-            placeholder="พิมพ์คำตอบตรงนี้ๆๆๆๆ..."
-            className="w-full p-4 border-2 border-pink-300 rounded-xl h-32 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all duration-300 relative z-10"
-          />
-          {hearts.map(heart => (
-            <FloatingHeart
-              key={heart.id}
-              position={heart.position}
-              onComplete={() => removeHeart(heart.id)}
-            />
-          ))}
+          <textarea value={currentAnswer} onChange={(e) => setCurrentAnswer(e.target.value)} onKeyDown={handleTextareaKeyPress} placeholder="พิมพ์คำตอบตรงนี้ๆๆๆๆ..." className="w-full p-4 border-2 border-pink-300 rounded-xl h-32 focus:ring-pink-300 transition-all duration-300 relative z-10" />
+          {hearts.map(heart => <FloatingHeart key={heart.id} position={heart.position} onComplete={() => removeHeart(heart.id)} />)}
         </div>
 
         <div className="flex justify-between mt-6">
-          <button
-            onClick={handlePrevious}
-            className={`px-6 py-2 rounded-full ${
-              currentQuestion === 1 
-                ? 'bg-pink-100 text-pink-500 hover:bg-pink-200' 
-                : 'bg-pink-100 text-pink-500 hover:bg-pink-200'
-            } transition-all duration-300`}
-          >
-            {currentQuestion === 1 ? 'อยากแก้ไขชื่อหรอ กดจิ~' : 'ย้อนกลับ'}
-          </button>
-          
+          <button onClick={handlePrevious} className="px-6 py-2 rounded-full bg-pink-100 text-pink-500 hover:bg-pink-200">{currentQuestion === 1 ? 'แก้ชื่อ' : 'ย้อนกลับ'}</button>
           {currentQuestion === QUESTIONS.length ? (
-            <button
-              onClick={handleSubmit}
-              disabled={!currentAnswer.trim()}
-              className="px-6 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600 disabled:bg-pink-200 disabled:text-pink-100 transition-all duration-300"
-            >
-              ส่งคำตอบ
-            </button>
+            <button onClick={handleSubmit} disabled={!currentAnswer.trim()} className="px-6 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600">ส่งคำตอบ</button>
           ) : (
-            <button
-              onClick={handleNext}
-              disabled={!currentAnswer.trim()}
-              className="px-6 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600 disabled:bg-pink-200 disabled:text-pink-100 transition-all duration-300"
-            >
-              ถัดไป
-            </button>
+            <button onClick={handleNext} disabled={!currentAnswer.trim()} className="px-6 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600">ถัดไป</button>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <QuestionPage />
+    </Suspense>
   );
 }
